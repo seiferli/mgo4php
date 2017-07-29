@@ -89,7 +89,7 @@ func NewResource() *DbResource {
 	res.config.initConfig(0)
 	session, err := mgo.Dial(res.config.getDialString())
 	if err != nil {
-		res.logger.Error("mongo DB connect error:" + err.Error())
+		res.logger.Error(err.Error()+ "[" + res.config.getDialString() + "]")
 		//return err
 	}
 	res.resource = session

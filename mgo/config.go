@@ -1,8 +1,6 @@
 package mgo
 
-import (
-	"os"
-)
+import "os"
 
 type DbConfig struct {
 	host     string
@@ -20,10 +18,11 @@ func (conf *DbConfig) initConfig(id int) {
 		conf.passwd = os.Getenv("MONGO_PASSWD")
 
 	} else {
-		conf.host = "*"
-		conf.port = "*"
-		conf.user = "*"
-		conf.passwd = "*"
+		ini := SetConfig("config.ini")  //dir with main.go
+		conf.host = ini.GetValue("MONGODB", "MONGO_HOST")
+		conf.port = ini.GetValue("MONGODB", "MONGO_PORT")
+		conf.user = ini.GetValue("MONGODB", "MONGO_USER")
+		conf.passwd = ini.GetValue("MONGODB", "MONGO_PASSWD")
 	}
 	conf.poolsize = 15
 	//switch (id) {} //do some configuration
