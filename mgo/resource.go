@@ -144,6 +144,13 @@ func checkEssentialCondition(c map[string]string) apiFormat {
 	}
 	return apiFormat{CODE_SUCCESS, MSG_SUCCESS, ""}
 }
+
+func parseWhereRecursion(wk string, wv interface{}, wbson bson.M) bson.M {
+	wbson[wk]= wv
+	return wbson
+}
+
+/*
 func parseWhereRecursion(wk string, wv interface{}, wbson bson.M) bson.M {
 	var testWv string
 	switch val:= wv.(type) {
@@ -179,6 +186,7 @@ func parseWhereRecursion(wk string, wv interface{}, wbson bson.M) bson.M {
 
 	return wbson
 }
+*/
 
 // invoke service start ==============
 /**
