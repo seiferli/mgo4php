@@ -1,39 +1,27 @@
-## mgo for php
-
-MongoDB ConnPool using hprose-golang + mgo.v2 in this project. 
-Maybe you can use it to resolve the problem "PHP-mongodb extention can not close connection".
-
-## How to use it?
-
-Use it at PHP script like this:
-
-```
-# step 1: you must download the hprose-php framework from this url
-http://github.com/hprose/hprose-php
-```
-
-```
-# step 2: use it like this.
 <?php
 require_once "hprose-php/src/Hprose.php";
 
 use Hprose\Client;
+use Hprose\TimeoutException;
 
 try{
     $client = Client::create('http://127.0.0.1:8080/', false);
-    
     $params= [
         'database'=> 'mall',
-        'collection'=> 'tag_goods_sales_rank',
+        'collection'=> 'tag_goods_rank',
         //'select'=> '+gid,+logo,+qty,-_id', //- means un-select the field,
         //'sort'=> '-show,-sale,+_id',  //+: asc sorting -: desc sorting
         //'offset'=> 100,
-        //'limit'=> 20,
+        'limit'=> 20,
     ];
     $where= [
-        'name'=> '/someword/',  //like "%someword%" at mysql
-        //'qty'=> 1,
-        //'sale'=> "1",     //attention at the value type: int? or string?
+        "and",
+        [
+            'qty'=> 1,
+        ],
+        [
+            'sale'=> "1", 
+        ],
     ];
     header("Content-type: text/html; charset=utf-8");
     echo $client->getData($params, $where);  //you can define more and more function at server-side
@@ -42,24 +30,24 @@ try{
     echo $e->getMessage();
 }
 
+/*
 ```
+    $where= [
+        //'name'=> '/someword/',  //like "%someword%" at mysql
+        //'qty'=> 1,
+        //'sale'=> "1",     //attention at the value type: int? or string?
+    ];
 
-## Advance $where condition 
-```
 #The above is the basic format, you can define it more complex
 ;
 # compare ">" "<" "!"
-
 $where= [
-    '!', '_id', 10,  //not equals 10
-];
-
-$where= [
-    'and',
-    ['>', 'qty', 10],   //greater than 10
-    ['<', '_id', 10],   //less than 10
-    ['>=', '_id', 10],  //greater and equals
-    ['<=', '_id', 10],  //less and equals
+    'qty'=> ">10",
+    'id'=> "<10",
+    'id'=> "=10",  //=10
+    'id'=> ">=10",  //not 10
+    'id'=> "<=10",  //not 10
+    'id'=> "!10",  //not 10
 ];
 ;
 # "in" condition
@@ -118,6 +106,4 @@ $where= [
     ]
     ...
 ];
-
-
-```
+*/

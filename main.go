@@ -17,5 +17,6 @@ func main() {
 	service.AddFunction("simpleUpdate", mgoResource.SimpleUpdate)
 	service.AddFunction("batchInsert", mgoResource.BatchInsert)
 	service.AddFunction("deleteData", mgoResource.DeleteData)
+
 	fasthttp.ListenAndServe(":8080", service.ServeFastHTTP)
 }
