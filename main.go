@@ -13,6 +13,8 @@ func main() {
 	service.AddFunction("changeResource", mgoResource.ChangeResource)
 	service.AddFunction("getData", mgoResource.GetData)
 	service.AddFunction("oneData", mgoResource.OneData)
+	service.AddFunction("countData", mgoResource.OneData)
+
 	service.AddFunction("simpleInsert", mgoResource.SimpleInsert)
 	service.AddFunction("simpleUpdate", mgoResource.SimpleUpdate)
 	service.AddFunction("batchInsert", mgoResource.BatchInsert)

@@ -3,14 +3,14 @@ package mgo
 import (
 	"api.pool.mongodb/logs"
 	"encoding/json"
-	"fmt"
-	mgo "gopkg.in/mgo.v2"
-	bson "gopkg.in/mgo.v2/bson"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"fmt"
+	"os"
+	mgo "gopkg.in/mgo.v2"
+	bson "gopkg.in/mgo.v2/bson"
 )
 
 var initlock sync.Once
@@ -117,8 +117,9 @@ func mapToString(m map[string]interface{}) string {
 			js, err := json.Marshal(v)
 			if err == nil {
 				str += "[bson]" + k + ":" + string(js)
+			} else {
+				str += "[bson]" + k + ":" + "{}"
 			}
-			str += "[bson]" + k + ":" + "{}"
 		//}
 	}
 	if len(m) == 0 {
@@ -170,15 +171,18 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 		var bsonArr []bson.M
 		for wk, wv := range w {
 			switch val := wv.(type) {
-				case map[interface{}]interface{}:
+			case []interface {}:
+				container := make(map[interface{}]interface{})
+				for ck, cv := range val {
+					container[ck]= cv
+				}
 				if wk != 0 {
-					fmt.Println(w)
-					bsonArr = append(bsonArr, parseWhereRecursion(val) )
+					bsonArr = append(bsonArr, parseWhereRecursion(container) )
 				}
 			}
 		}
-		if len(bsonArr)>2 {
-			Exception("Must have two condition at least where using 'and' & 'or' " )
+		if len(bsonArr)<2 {
+			Exception("Must have two condition at least where using '$and' or '$or'." )
 		}
 		if w[0]== "and" {
 			final["$and"]= bsonArr
@@ -206,7 +210,8 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$neq":w[2]} }
 
 	} else if w[0] == "%" {
-		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$regex": bson.RegEx{string(w[2]), "i"}} }
+		reg := strings.Replace(handleFieldAssetion(w[2]), "/", "", -1)
+		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$regex": bson.RegEx{reg, "i"}} }
 
 	} else if w[0] == "=" {
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$eq":w[2]} }
@@ -218,10 +223,6 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 			final[instWk]= wv
 		}
 	}
-	//if strings.Contains( instWv, ">") {
-	//	final[instWk]= bson.M{"$gt": strings.Replace(instWv, ">", "", -1)}
-	//}
-
 	//fmt.Println(final)
 	return final
 }
@@ -237,6 +238,61 @@ type DbCondition struct {
     lmt int64         //limit
 }
 */
+func (res *DbResource) findData(instance *mgo.Session, c map[string]string, w map[interface{}]interface{}) *mgo.Query {
+	collection := instance.DB(c["database"]).C(c["collection"])
+
+	q := collection.Find(nil)
+	var conditionLog string
+
+	//some filter
+	wbson := make(bson.M)
+	wbson = parseWhereRecursion(w)
+
+	if len(wbson) > 0 {
+		//wbson= bson.M{"_id":bson.M{"$gt":1}}
+		conditionLog += "Where:(" + mapToString(wbson) + "); "
+		q = collection.Find(wbson)
+	}
+
+	if _, ok := c["offset"]; ok {
+		offset, _ := strconv.Atoi(c["offset"])
+		q.Skip(offset)
+		conditionLog += "Offset:(" + strconv.Itoa(offset) + "); "
+	}
+
+	if _, ok := c["limit"]; ok {
+		limit, _ := strconv.Atoi(c["limit"])
+		q.Limit(limit)
+		conditionLog += "Limit:(" + strconv.Itoa(limit) + "); "
+	}
+
+	if _, ok := c["sort"]; ok {
+		sortField := strings.Split(c["sort"], ",")
+		q.Sort(sortField...)
+	}
+
+	if _, ok := c["select"]; ok {
+		selectField := strings.Split(c["select"], ",")
+		sbson := make(bson.M)
+		for _, v := range selectField {
+			if v[0] == '-' {
+				sbson[v[1:len(v)]] = 0
+			} else if v[0] == '+' {
+				sbson[v[1:len(v)]] = 1
+			} else {
+				sbson[v] = 1
+			}
+		}
+		conditionLog += "Select:(" + mapToString(sbson) + "); "
+		q.Select(sbson)
+	}
+
+	if conditionLog != "" {
+		res.processLog("Condition: " + conditionLog)
+	}
+	return q
+}
+
 func (res *DbResource) GetData(c map[string]string, w map[interface{}]interface{}) string {
 	format := checkEssentialCondition(c)
 	if format.Code != CODE_SUCCESS {
@@ -245,78 +301,62 @@ func (res *DbResource) GetData(c map[string]string, w map[interface{}]interface{
 	} else {
 		instance := newInstance(res)
 		defer instance.Close()
-		collection := instance.DB(c["database"]).C(c["collection"])
 
-		q := collection.Find(nil)
-		var conditionLog string
-
-		//some filter
-		wbson := make(bson.M)
-		wbson = parseWhereRecursion(w)
-
-		if len(wbson) > 0 {
-			//wbson= bson.M{"_id":bson.M{"$gt":1}}
-			conditionLog += "Where:(" + mapToString(wbson) + "); "
-			q = collection.Find(wbson)
-		}
-
-		if _, ok := c["offset"]; ok {
-			offset, _ := strconv.Atoi(c["offset"])
-			q.Skip(offset)
-			conditionLog += "Offset:(" + strconv.Itoa(offset) + "); "
-		}
-
-		if _, ok := c["limit"]; ok {
-			limit, _ := strconv.Atoi(c["limit"])
-			q.Limit(limit)
-			conditionLog += "Limit:(" + strconv.Itoa(limit) + "); "
-		}
-
-		if _, ok := c["sort"]; ok {
-			sortField := strings.Split(c["sort"], ",")
-			q.Sort(sortField...)
-		}
-
-		if _, ok := c["select"]; ok {
-			selectField := strings.Split(c["select"], ",")
-			sbson := make(bson.M)
-			for _, v := range selectField {
-				if v[0] == '-' {
-					sbson[v[1:len(v)]] = 0
-				} else if v[0] == '+' {
-					sbson[v[1:len(v)]] = 1
-				} else {
-					sbson[v] = 1
-				}
-			}
-			conditionLog += "Select:(" + mapToString(sbson) + "); "
-			q.Select(sbson)
-		}
-
-		if conditionLog != "" {
-			res.processLog("Condition: " + conditionLog)
-		}
-
-		//finnally.
+		q := res.findData(instance, c, w)
 		var result []interface{}
+
 		q.All(&result)
 		res.processLog("Return '" + c["database"] + "." + c["collection"] +
 			"' rows count : " + strconv.Itoa(len(result)))
-
-		format.Data = result
+		format.Data= result
 		return format.Send()
 	}
 }
 
-func (res *DbResource) OneData(c map[string]string, w map[string]interface{}) {
+func (res *DbResource) OneData(c map[string]string, w map[interface{}]interface{}) string {
+	format := checkEssentialCondition(c)
+	if format.Code != CODE_SUCCESS {
+		return format.Send()
 
+	} else {
+		instance := newInstance(res)
+		defer instance.Close()
+
+		q := res.findData(instance, c, w)
+		var result interface{}
+
+		q.One(&result)
+		res.processLog("Return one data from '" + c["database"] + "." + c["collection"])
+		format.Data= result
+		return format.Send()
+	}
+}
+
+func (res *DbResource) countData(c map[string]string, w map[interface{}]interface{}) string {
+	format := checkEssentialCondition(c)
+	if format.Code != CODE_SUCCESS {
+		return format.Send()
+
+	} else {
+		instance := newInstance(res)
+		defer instance.Close()
+
+		q := res.findData(instance, c, w)
+		cnt, err := q.Count()
+		if err==nil {
+			res.processLog("Query '" + c["database"] + "." + c["collection"] +
+				"' rows count : " + strconv.Itoa(cnt) )
+			format.Data= cnt
+		}
+		return format.Send()
+	}
 }
 
 func (res *DbResource) SimpleInsert(c map[string]string, d map[string]interface{}) {
 
 }
 
-func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{}, d map[string]interface{}) {
+func (res *DbResource) SimpleUpdate(c map[string]string, w map[interface{}]interface{}, d map[string]interface{}) {
 
 }
 
@@ -324,7 +364,7 @@ func (res *DbResource) BatchInsert(c map[string]string, d map[string]interface{}
 
 }
 
-func (res *DbResource) DeleteData(c map[string]string, w map[string]interface{}) {
+func (res *DbResource) DeleteData(c map[string]string, w map[interface{}]interface{}) {
 
 }
 

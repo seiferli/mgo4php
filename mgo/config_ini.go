@@ -124,11 +124,22 @@ func (c *Config) ReadList() []map[string]map[string]string {
 	return c.conflist
 }
 
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
 func CheckErr(err error) string {
 	if err != nil {
 		return fmt.Sprintf("Error is :'%s'", err.Error())
 	}
-	return "Notfound this error"
+	return "Not found this error"
 }
 
 //Ban repeated appended to the slice method

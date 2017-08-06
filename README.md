@@ -3,7 +3,7 @@
 MongoDB ConnPool using hprose-golang + mgo.v2 in this project. 
 Maybe you can use it to resolve the problem "PHP-mongodb extention can not close connection".
 
-## How to use it?
+## How to use it on client side (php)?
 
 Use it at PHP script like this:
 
@@ -48,7 +48,7 @@ try{
 ```
 #The above is the basic format, you can define it more complex
 ;
-# compare ">" "<" "!"
+# compare ">" "<" "!" "%"
 
 $where= [
     '!', '_id', 10,  //not equals 10
@@ -60,6 +60,23 @@ $where= [
     ['<', '_id', 10],   //less than 10
     ['>=', '_id', 10],  //greater and equals
     ['<=', '_id', 10],  //less and equals
+    ['<=', '_id', 10],  //less and equals
+    ['%', 'name', "apple"],  //contain some keyword
+];
+
+$where= [
+    "or",
+    [
+         "and",
+        [ ">", "_id", 5 ],
+        [ "<", "_id", 10 ],
+    ],
+    [
+        "and",
+        [">", "_id", 50 ],
+        [ "<", "_id", 100 ],
+    ],
+    ["%", 'name', "keyword"]
 ];
 ;
 # "in" condition
@@ -101,12 +118,12 @@ $where= [
     [
         "or",
         [
-            'qty'=> ">10",
-            'sale'=> "1", 
+            [ ">", "_id", 5 ],
+            [ "<", "_id", 10 ],
         ],
         [
-            'qty'=> "<100",
-            'sale'=> "1", 
+            [">", "_id", 50 ],
+            [ "<", "_id", 100 ],
         ],
     ],
     [

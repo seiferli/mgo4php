@@ -22,6 +22,11 @@ func (conf *DbConfig) initConfig(id int) {
 		conf.passwd = os.Getenv("MONGO_PASSWD")
 
 	} else {
+		ok, err := PathExists("config.ini")
+		if !ok {
+			panic("Please copy <config.ini.sample> to <config.ini> at the same directory.")
+		}
+
 		ini := SetConfig("config.ini")  //dir with main.go
 		conf.host = ini.GetValue("MONGODB", "MONGO_HOST")
 		conf.port = ini.GetValue("MONGODB", "MONGO_PORT")
