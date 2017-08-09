@@ -36,7 +36,7 @@ try{
         //'sale'=> "1",     //attention at the value type: int? or string?
     ];
     header("Content-type: text/html; charset=utf-8");
-    echo $client->getData($params, $where);  //you can define more and more function at server-side
+    echo $client->allData($params, $where);  //you can define more and more function at server-side
     
 } catch (Exception $e){
     echo $e->getMessage();

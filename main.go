@@ -11,14 +11,14 @@ func main() {
 	service := rpc.NewFastHTTPService()
 	//some methods
 	service.AddFunction("changeResource", mgoResource.ChangeResource)
-	service.AddFunction("getData", mgoResource.GetData)
-	service.AddFunction("oneData", mgoResource.OneData)
-	service.AddFunction("countData", mgoResource.OneData)
+	service.AddFunction("all", mgoResource.AllData)
+	service.AddFunction("one", mgoResource.OneData)
+	service.AddFunction("count", mgoResource.CountData)
 
-	service.AddFunction("simpleInsert", mgoResource.SimpleInsert)
-	service.AddFunction("simpleUpdate", mgoResource.SimpleUpdate)
+	service.AddFunction("insert", mgoResource.SimpleInsert)
+	service.AddFunction("delete", mgoResource.DeleteData)
+	service.AddFunction("update", mgoResource.SimpleUpdate)
 	service.AddFunction("batchInsert", mgoResource.BatchInsert)
-	service.AddFunction("deleteData", mgoResource.DeleteData)
 
 	fasthttp.ListenAndServe(":8080", service.ServeFastHTTP)
 }
