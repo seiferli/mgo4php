@@ -144,10 +144,10 @@ func (res *DbResource) processLog(log string) {
 }
 func checkEssentialCondition(c map[string]string) apiFormat {
 	if _, ok := c["database"]; !ok {
-		return apiFormat{CODE_PARAMS, "Omit 'database' paramter when getData", nil}
+		return apiFormat{CODE_PARAMS, "Omit 'database' paramter", nil}
 	}
 	if _, ok := c["collection"]; !ok {
-		return apiFormat{CODE_PARAMS, "Omit 'collection' paramter when getData", nil}
+		return apiFormat{CODE_PARAMS, "Omit 'collection' paramter", nil}
 	}
 	return apiFormat{CODE_SUCCESS, MSG_SUCCESS, ""}
 }
@@ -384,12 +384,12 @@ func handleInsertData(d map[string]interface{}) bson.D {
 	var final bson.D
 	for dk, dv := range d {
 		switch val := dv.(type) {
-		case map[interface {}]interface {}:
+		case map[interface{}]interface{}:
 			container := make(map[string]interface{})
 			for sk, sv := range val {
 				switch vval := sk.(type) {
 				case string:
-					container[vval]= sv
+					container[vval] = sv
 				}
 			}
 			final = append(final, bson.DocElem{dk, handleInsertData(container)})
@@ -415,14 +415,10 @@ func (res *DbResource) BatchInsert(c map[string]string, d []map[string]interface
 
 		} else {
 			collection := instance.DB(c["database"]).C(c["collection"])
-
 			var bsonD []interface{}
 			for _, dv := range d {
 				bsonD = append(bsonD, handleInsertData(dv))
 			}
-
-			fmt.Println(bsonD)
-
 			err := collection.Insert(bsonD...)
 
 			if err != nil {
