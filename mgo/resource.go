@@ -4,13 +4,13 @@ import (
 	"api.pool.mongodb/logs"
 	"encoding/json"
 	"fmt"
-	mgo "gopkg.in/mgo.v2"
-	bson "gopkg.in/mgo.v2/bson"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	mgo "gopkg.in/mgo.v2"
+	bson "gopkg.in/mgo.v2/bson"
 )
 
 var initlock sync.Once
@@ -463,25 +463,23 @@ func (res *DbResource) DeleteData(c map[string]string, w map[string]interface{})
 func handleUpdateData(d map[interface{}]interface{}) bson.M {
 	final := make(bson.M)
 	if d[0] == "reflesh" {
-		container := make(bson.M)
-		for _, dv := range d {
-			switch val := dv.(type) {
-			case string:
-			case map[interface{}]interface{}:
-				for ck, cv := range val {
-					switch sck := ck.(type) {
-					case string:
-						container[sck] = cv
-					}
-				}
-			}
+		switch val:= d[1].(type) {
+		case map[interface{}]interface{}:
+			final["$set"] = handleUpdateData(val)
 		}
-		final["$set"] = container
 	} else {
 		for dk, dv := range d {
-			switch val := dk.(type) {
-			case string:
-				final[val] = dv
+			switch val := dv.(type) {
+			case map[interface{}]interface{}:
+				switch vval := dk.(type) {
+				case string:
+					final[vval] = handleUpdateData(val)
+				}
+			default:
+				switch vval := dk.(type) {
+				case string:
+					final[vval] = val
+				}
 			}
 		}
 	}
