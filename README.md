@@ -1,140 +1,223 @@
-## mgo for php
+## mgo for php (mgo4php)
 
-MongoDB ConnPool using hprose-golang + mgo.v2 in this project. 
-Maybe you can use it to resolve the problem "PHP-mongodb extention can not close connection".
+> MongoDB Connetion Pool using hprose-golang + mgo.v2 .  Maybe you can use it to resolve the problem "PHP-mongodb extention can not close connection".
 
-## How to use it on client side (php)?
+## How to use it on client side (such as php)?
 
-Use it at PHP script like this:
-
+> **step1: Install Git, and Download the project source using GO GET command tools**
 ```
-# step 1: you must download the hprose-php framework from this url
-http://github.com/hprose/hprose-php
+cd /home/www/gopath/src/
+go get gopkg.in/mgo.v2
+go get github.com/valyala/fasthttp
+go get github.com/hprose/hprose-golang
+go get github.com/hprose/hprose-php  ## Make sure your php version > 5.5
+go get github.com/seiferli/mgo4php
+```
+> **step2: Make the mongodb configuration file**
+```
+cd /home/www/gopath/src/github.com/seiferli/mgo4php
+cp config.ini.sample config.ini
+vi config.ini  ## Input your setting paramters. 
+```
+> **step3: Server Side： Running Mgo4php service**
+```
+cd /home/www/gopath/src/github.com/seiferli/mgo4php
+go run main.go # you can modify listen port at main.go
+```
+> **step4: Client Side： run the demo script**
+```
+cd /home/www/gopath/src/github.com/seiferli/mgo4php/mgo
+php client.php # or visit script output on web browser
 ```
 
+## What can we do at client.php througth the mgo4php ?
+
+> **Basic calling**
 ```
-# step 2: use it like this.
 <?php
-require_once "hprose-php/src/Hprose.php";
+require_once "../../../hprose-php/src/Hprose.php";
 
 use Hprose\Client;
+use Hprose\TimeoutException;
 
-try{
-    $client = Client::create('http://127.0.0.1:8080/', false);
-    
-    $params= [
-        'database'=> 'mall',
-        'collection'=> 'tag_goods_sales_rank',
-        //'select'=> '+gid,+logo,+qty,-_id', //- means un-select the field,
-        //'sort'=> '-show,-sale,+_id',  //+: asc sorting -: desc sorting
-        //'offset'=> 100,
-        //'limit'=> 20,
-    ];
-    $where= [
-        'name'=> '/someword/',  //like "%someword%" at mysql
-        //'qty'=> 1,
-        //'sale'=> "1",     //attention at the value type: int? or string?
-    ];
-    header("Content-type: text/html; charset=utf-8");
-    echo $client->allData($params, $where);  //you can define more and more function at server-side
-    
-} catch (Exception $e){
-    echo $e->getMessage();
+header("Content-type: text/html; charset=utf-8");
+
+$client = Client::create('http://127.0.0.1:8080/', false);
+$params= [
+    'database'=> '[dbname]',
+    'collection'=> '[collection]',
+];
+
+// running server side function
+echo $client->one($params, []); # return one matching record
+#
+### return the result json
+{
+    code: 0,
+    msg: "ok",
+    data: {
+        _id: 1,
+        del: 0,
+        gid: 790,
+        logo: "https://image.etcchebao.com/20160314182500cjXwqz.jpg",
+        name: "商品BBB1",
+    }
 }
 
 ```
 
-## Advance $where condition 
+> **Read simple data**
 ```
-#The above is the basic format, you can define it more complex
-;
-# compare ">" "<" "!" "%"
-
-$where= [
-    '!', '_id', 10,  //not equals 10
+$params= [
+    'database'=> '[dbname]',            # not options! 
+    'collection'=> '[collection]',      # not options! 
+    
+    //"-" means un-select the field, unset the key when return all field
+    'select'=> '+gid,+logo,+qty,-_id',  # options 
+    
+    //+: asc sorting -: desc sorting
+    'sort'=> '-show,-sale,+_id',        # options 
+    
+    'offset'=> 100, // offset number
+    'limit'=> 20,  // limit count       # options 
 ];
 
-$where= [
-    'and',
-    ['>', 'qty', 10],   //greater than 10
-    ['<', '_id', 10],   //less than 10
-    ['>=', '_id', 10],  //greater and equals
-    ['<=', '_id', 10],  //less and equals
-    ['<=', '_id', 10],  //less and equals
-    ['%', 'name', "apple"],  //contain some keyword
-];
+// return all matching record
+echo $client->all($params, []);  
+#
 
-$where= [
-    "or",
-    [
-         "and",
-        [ ">", "_id", 5 ],
-        [ "<", "_id", 10 ],
-    ],
-    [
-        "and",
-        [">", "_id", 50 ],
-        [ "<", "_id", 100 ],
-    ],
-    ["%", 'name', "keyword"]
-];
-;
+// return all matching count
+echo $client->count($params, []);  
+#
+
+// return all matching count
+echo $client->all($params, $where= [
+    'type'=> "hot",
+    'sale'=> "1",     // string type
+    'status'=> 1,     // int type
+]);  
+#
+
+```
+
+> **Complex query expression**
+```
+
+# compare ">" "<" ">=" "<=" "!" "%"
+$where= [ ">", "_id", 11 ];
+$where= [ ">=", "_id", 11 ];
+$where= [ "<", "_id", 99 ];
+$where= [ "<=", "_id", 99 ];
+$where= [ "=", "_id", 55 ];
+$where= [ "!", "_id", 77 ];
+$where= [ "%", "title", "someword" ];
+#
 # "in" condition
-$where= [
-    "in",
-    [ 1,3,4,5 ],
-    ...
-];
-;
+$where= [ "in", "_id", [ 1,3,4,5 ] ];
+#
 # "and" condition
 $where= [
     "and",
-    [
-        'qty'=> 1,
-    ],
-    [
-        'sale'=> "1", 
-    ],
+    [ ">=", "_id", 11 ],
+    [ "<", "_id", 99 ],
     ...
 ];
-;
+#
 # "or" condition
 $where= [
     "or",
     [
-        'qty'=> ">10",
-        'sale'=> "1", 
+        "and",
+        [ ">=", "_id", 11 ],
+        [ "<", "_id", 99 ],
+        ...
     ],
     [
         'qty'=> "<100",
         'sale'=> "1", 
     ],
+    [ "%", "title", "somestring"],
     ...
 ];
-;
-# and this... 
-$where= [
-    "and",
-    [
-        "or",
-        [
-            [ ">", "_id", 5 ],
-            [ "<", "_id", 10 ],
-        ],
-        [
-            [">", "_id", 50 ],
-            [ "<", "_id", 100 ],
-        ],
-    ],
-    [
-        'del'=> 1,
-    ],
-    [
-        "in",
-        [ 1,3,4,5 ],
+#
+```
+
+
+> **Insert / update / batchInsert / delete**
+```
+# base insert 
+
+$params= [
+    'database'=> '[dbname]',            # not options! 
+    'collection'=> '[collection]',      # not options! 
+];
+
+// simple insert
+echo $client->insert($params, ["title"=>"test", "status"=>1, "content"=>"some content"... ]);  
+#
+#
+# nesting insert bson data
+echo $client->insert($params, [
+     "string"=>"hello world", "_id"=> 123, "array"=>[ 
+         's1'=> "ssss", 
+         's2'=> [ 
+            1, 3, 34  
+         ]
+     ],
+ ]);
+ 
+#
+# delete bson data
+echo $client->delete($params, $where= ["_id"=> 123] );
+
+#
+# update the rows
+echo $client->update($params, $where= ["_id"=> 123], [
+[
+    "date"=> date('Y-m-d H:i:s'), 
+    "arr"=> [
+        "string"=> "new string", 
     ]
+] );
+
+#
+# rewrite the rows
+echo $client->update($params, $where= ["_id"=> 123], [
+    'reflesh', 
+    [
+        "date"=>date('Y-m-d H:i:s'), 
+        "arr"=> [
+            "string"=> "new string", 
+            "arr"=> [ 1, 2, 3] 
+        ] 
+    ] 
+] );
+    
+#
+# insert batch
+echo $client->batchInsert($params, [
+    [ 
+        "string"=>"fffffffff", "array"=> [ 
+            's1'=> "ssss", 's2'=> 999999999 
+        ]
+    ],
+    [ 
+        's1'=> "ssss", "array"=>[ 
+            's1'=> "ssss", 
+            's2'=> [ 
+                's1'=> "ssss", 's2'=> 999999999 
+            ] 
+        ] 
+    ],
     ...
-];
+] );
+    
+```
+
+> **More advance syntax analysis**
+
+```
+develop...
 
 
 ```
