@@ -81,9 +81,11 @@ func NewResource() *DbResource {
 	//init logger
 	res.logger = logs.NewLogger(1000)
 	if isDebug {
+		fmt.Println( ConsoleYellow("Starting init CONSOLE logger")+ "...")
 		res.logger.SetLogger(logs.AdapterConsole)
 
 	} else {
+		fmt.Println( ConsoleYellow("Starting init FILE logger")+ "...")
 		//fmt.Println(runtime.GOOS, runtime.GOARCH, runtime.GOROOT(), os.Getenv("GOPATH"))
 		// windows/darwin/linux/android/...   amd64   C:/goroot   F:/web/host/gopath
 		logPath := runtime.GOROOT() + "/logs/"
@@ -100,14 +102,18 @@ func NewResource() *DbResource {
 	}
 
 	//init mongodb db config
-	res.config.initConfig(0)
+	fmt.Println( ConsoleYellow("Starting init mongodb config")+ "...")
+	res.config.initConfig(0, "./config.ini")
 	session, err := mgo.Dial(res.config.getDialString())
 	if err != nil {
 		res.logger.Error(err.Error() + "[" + res.config.getDialString() + "]")
 		//return err
 	}
 	res.resource = session
+	fmt.Println(ConsoleYellow("Setting pool size as " + ConvertToString(res.config.poolsize ))+ "...")
 	res.resource.SetPoolLimit(res.config.poolsize)
+
+	fmt.Println(ConsoleGreen("NewResource Complete !") )
 	return res
 }
 
@@ -529,7 +535,7 @@ func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{
 }
 
 func (res *DbResource) ChangeResource(resourceId int) {
-	res.config.initConfig(resourceId)
+	res.config.initConfig(resourceId, "config.ini")
 }
 
 // invoke service end ==============

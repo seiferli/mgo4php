@@ -1,36 +1,5 @@
-## mgo for php (mgo4php)
 
-> MongoDB Connetion Pool using hprose-golang + mgo.v2 .  Maybe you can use it to resolve the problem "PHP-mongodb extention can not close connection".
-
-## How to use it on client side (such as php)?
-
-> **step1: Install Git, and Download the project source using GO GET command tools**
-```
-cd /home/www/gopath/src/
-go get gopkg.in/mgo.v2
-go get github.com/valyala/fasthttp
-go get github.com/hprose/hprose-golang
-go get github.com/hprose/hprose-php  ## Make sure your php version > 5.5
-go get github.com/seiferli/mgo4php
-```
-> **step2: Make the mongodb configuration file**
-```
-cd /home/www/gopath/src/github.com/seiferli/mgo4php
-cp config.ini.sample config.ini
-vi config.ini  ## Input your setting paramters. 
-```
-> **step3: Server Side： Running Mgo4php service**
-```
-cd /home/www/gopath/src/github.com/seiferli/mgo4php
-go run main.go # you can modify listen port at main.go
-```
-> **step4: Client Side： run the demo script**
-```
-cd /home/www/gopath/src/github.com/seiferli/mgo4php/mgo
-php client.php # or visit script output on web browser
-```
-
-## What can we do at client.php througth the mgo4php ?
+## 基本语法
 
 > **Basic calling**
 ```
@@ -217,7 +186,7 @@ echo $client->batchInsert($params, [
 > **More advance syntax analysis**
 
 ```
-develop...
+开发中...
 
 
 ```

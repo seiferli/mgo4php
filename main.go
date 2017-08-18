@@ -18,6 +18,7 @@ import (
 	rpc "github.com/hprose/hprose-golang/rpc/fasthttp"
 	"github.com/seiferli/mgo4php/mgo"
 	"github.com/valyala/fasthttp"
+	"fmt"
 )
 
 func main() {
@@ -25,7 +26,6 @@ func main() {
 	service := rpc.NewFastHTTPService()
 	//some methods
 	//service.AddFunction("changeResource", mgoResource.ChangeResource)
-
 	service.AddFunction("all", mgoResource.AllData)
 	service.AddFunction("one", mgoResource.OneData)
 	service.AddFunction("count", mgoResource.CountData)
@@ -35,5 +35,7 @@ func main() {
 	service.AddFunction("update", mgoResource.SimpleUpdate)
 	service.AddFunction("batchInsert", mgoResource.BatchInsert)
 
-	fasthttp.ListenAndServe(":8080", service.ServeFastHTTP)
+	port := ":8080"
+	fmt.Println(mgo.ConsoleGreen("AddFunction Complete and listening "+ port+ " !") )
+	fasthttp.ListenAndServe(port, service.ServeFastHTTP)
 }

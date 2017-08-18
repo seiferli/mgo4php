@@ -27,16 +27,20 @@ type DbConfig struct {
 	poolsize int
 }
 
-func (conf *DbConfig) initConfig(id int) {
+func (conf *DbConfig) initConfig(id int, filepath string) {
 	conf.poolsize = 50
 	if os.Getenv("ENV") == "pro" || os.Getenv("ENV") == "test" {
 		conf.host = os.Getenv("MONGO_HOST")
 		conf.port = os.Getenv("MONGO_PORT")
 		conf.user = os.Getenv("MONGO_USER")
 		conf.passwd = os.Getenv("MONGO_PASSWD")
+		pool, err:= strconv.Atoi(os.Getenv("MONGO_POOLSIZE"))
+		if err!= nil && pool>1 {
+			conf.poolsize = pool
+		}
 
 	} else {
-		ok, err := PathExists("config.ini")
+		ok, err := PathExists(filepath) //"config.ini"
 		if !ok {
 			panic("Please copy <config.ini.sample> to <config.ini> at the same directory.")
 		}
