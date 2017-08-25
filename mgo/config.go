@@ -16,6 +16,7 @@ package mgo
 
 import (
 	"os"
+	"fmt"
 	"strconv"
 )
 
@@ -59,6 +60,7 @@ func (conf *DbConfig) initConfig(id int, filepath string) {
 }
 
 func (conf *DbConfig) getDialString() string {
+	fmt.Println( ConsoleYellow("Connecting ")+ ConsoleRed(conf.user+ ":***@"+ conf.host + ":" + conf.port) )
 	//mongodb://myuser:mypass@localhost:40001,otherhost:40001/mydb
 	return conf.user + ":" + conf.passwd + "@" + conf.host + ":" + conf.port
 }
