@@ -517,6 +517,23 @@ func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{
 
 		collection := instance.DB(c["database"]).C(c["collection"])
 		data := handleUpdateData(d)
+
+		//handle object ID
+		str, ok := w["_id_"]
+		if ok {
+			var oId string
+			switch val := str.(type) {
+			case int:
+				oId = strconv.Itoa(val)
+			case string:
+				oId = val
+			case byte:
+				oId = string(val)
+			}
+			w["_id"]= bson.ObjectIdHex(oId)
+			delete(w,"_id_")  //use _id_ replace into _id
+		}
+
 		err := collection.Update(w, data)
 
 		res.processLog("Where:(" + mapToString(w) + "); ")
