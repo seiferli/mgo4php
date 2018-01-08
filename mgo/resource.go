@@ -153,7 +153,7 @@ func mapToString(m map[string]interface{}) string {
 
 func init() {
 	if os.Getenv("ENV") != "pro" {
-		isDebug = true
+		isDebug = false  //开启日志写入性能会大幅下降
 	}
 }
 

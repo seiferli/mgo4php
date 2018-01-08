@@ -36,7 +36,7 @@ func (conf *DbConfig) initConfig(id int, filepath string) {
 		conf.user = os.Getenv("MONGO_USER")
 		conf.passwd = os.Getenv("MONGO_PASSWD")
 		pool, err:= strconv.Atoi(os.Getenv("MONGO_POOLSIZE"))
-		if err!= nil && pool>1 {
+		if err== nil && pool>50 {
 			conf.poolsize = pool
 		}
 
@@ -52,7 +52,7 @@ func (conf *DbConfig) initConfig(id int, filepath string) {
 		conf.user = ini.GetValue("MONGODB", "MONGO_USER")
 		conf.passwd = ini.GetValue("MONGODB", "MONGO_PASSWD")
 		pool, err:= strconv.Atoi(ini.GetValue("MONGODB", "MONGO_POOLSIZE"))
-		if err!= nil && pool>1 {
+		if err== nil && pool>50 {
 			conf.poolsize = pool
 		}
 	}
