@@ -31,9 +31,10 @@ func main() {
 	service.AddFunction("count", mgoResource.CountData)
 
 	service.AddFunction("insert", mgoResource.SimpleInsert)
-	service.AddFunction("delete", mgoResource.DeleteData)
-	service.AddFunction("update", mgoResource.SimpleUpdate)
 	service.AddFunction("batchInsert", mgoResource.BatchInsert)
+	service.AddFunction("delete", mgoResource.DeleteData)
+	service.AddFunction("update", mgoResource.CombineUpdate)
+	//service.AddFunction("update", mgoResource.SimpleUpdate)
 
 	port := ":8080"
 	fmt.Println(mgo.ConsoleGreen("AddFunction Complete and listening "+ port+ " !") )

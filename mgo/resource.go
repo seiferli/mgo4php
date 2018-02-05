@@ -376,7 +376,7 @@ func (res *DbResource) CountData(c map[string]string, w map[interface{}]interfac
 	}
 }
 
-func (res *DbResource) SimpleInsert(c map[string]string, d map[string]interface{}) string {
+func (res *DbResource) SimpleInsert(c map[string]string, js string) string {
 	format := checkEssentialCondition(c)
 	if format.Code != CODE_SUCCESS {
 		return format.Send()
@@ -386,42 +386,30 @@ func (res *DbResource) SimpleInsert(c map[string]string, d map[string]interface{
 		defer instance.Close()
 
 		collection := instance.DB(c["database"]).C(c["collection"])
-		err := collection.Insert(handleInsertData(d))
 
+		var data map[string]interface{}
+
+		err := json.Unmarshal([]byte(js), &data )
 		if err != nil {
 			format.Code = CODE_DB
-			format.Msg = string(err.Error())
+			format.Msg = "js "+ string(err.Error())+ " <"+ js + "> "
+
 		} else {
-			res.processLog("[Insert]: '" + c["database"] + "." + c["collection"] +
-				"' data: " + mapToString(d))
-			format.Data = ""
+			err = collection.Insert( data )
+			if err != nil {
+				format.Code = CODE_DB
+				format.Msg = "insert "+ string(err.Error())
+			} else {
+				res.processLog("[Insert]: '" + c["database"] + "." + c["collection"] +
+					"' data: " + js )
+				format.Data = ""
+			}
 		}
 		return format.Send()
 	}
 }
 
-func handleInsertData(d map[string]interface{}) bson.D {
-	var final bson.D
-	for dk, dv := range d {
-		switch val := dv.(type) {
-		case map[interface{}]interface{}:
-			container := make(map[string]interface{})
-			for sk, sv := range val {
-				switch vval := sk.(type) {
-				case string:
-					container[vval] = sv
-				}
-			}
-			final = append(final, bson.DocElem{dk, handleInsertData(container)})
-
-		default:
-			final = append(final, bson.DocElem{dk, val})
-		}
-	}
-	return final
-}
-
-func (res *DbResource) BatchInsert(c map[string]string, d []map[string]interface{}) string {
+func (res *DbResource) BatchInsert(c map[string]string, js string ) string {
 	format := checkEssentialCondition(c)
 	if format.Code != CODE_SUCCESS {
 		return format.Send()
@@ -430,24 +418,36 @@ func (res *DbResource) BatchInsert(c map[string]string, d []map[string]interface
 		instance := newInstance(res)
 		defer instance.Close()
 
-		if len(d) > 1000 {
-			Exception("Batch insert count must less than 1000.")
+		var data []interface{}
+		err := json.Unmarshal([]byte(js), &data )
+		if err != nil {
+			format.Code = CODE_DB
+			format.Msg = "js "+ string(err.Error())+ " <"+ js + "> "
 
 		} else {
-			collection := instance.DB(c["database"]).C(c["collection"])
-			var bsonD []interface{}
-			for _, dv := range d {
-				bsonD = append(bsonD, handleInsertData(dv))
-			}
-			err := collection.Insert(bsonD...)
+			dataSize := len(data)
+			if dataSize > 1000 {
+				Exception("Batch insert count must less than 1000.")
 
-			if err != nil {
-				format.Code = CODE_DB
-				format.Msg = string(err.Error())
 			} else {
-				res.processLog("[BatchInsert]: '" + c["database"] + "." + c["collection"] +
-					"' count: " + strconv.Itoa(len(d)))
-				format.Data = len(d)
+				collection := instance.DB(c["database"]).C(c["collection"])
+
+				var output error
+				for _, dd := range data {
+					err = collection.Insert(dd)
+					if err != nil {
+						output= err
+					}
+				}
+
+				if output != nil {
+					format.Code = CODE_DB
+					format.Msg = "bInsert "+ string(output.Error())
+				} else {
+					res.processLog("[BatchInsert]: '" + c["database"] + "." + c["collection"] +
+						"' data: " + js )
+					format.Data = dataSize
+				}
 			}
 		}
 		return format.Send()
@@ -470,7 +470,7 @@ func (res *DbResource) DeleteData(c map[string]string, w map[string]interface{})
 
 		if err != nil {
 			format.Code = CODE_DB
-			format.Msg = string(err.Error())
+			format.Msg = "delete "+ string(err.Error())
 		} else {
 			res.processLog("[Delete]: '" + c["database"] + "." + c["collection"] +
 				"' Matched: " + strconv.Itoa(result.Matched) + "' Removed: " + strconv.Itoa(result.Removed))
@@ -480,6 +480,33 @@ func (res *DbResource) DeleteData(c map[string]string, w map[string]interface{})
 	}
 }
 
+/**
+ * @deprecated this function already not used.
+ *//*
+func handleInsertData(d map[string]interface{}) bson.D {
+	var final bson.D
+	for dk, dv := range d {
+		switch val := dv.(type) {
+		case map[interface{}]interface{}:
+			container := make(map[string]interface{})
+			for sk, sv := range val {
+				switch vval := sk.(type) {
+				case string:
+					container[vval] = sv
+				}
+			}
+			final = append(final, bson.DocElem{dk, handleInsertData(container)})
+
+		default:
+			final = append(final, bson.DocElem{dk, val})
+		}
+	}
+	return final
+}
+*/
+/**
+ * @deprecated this function already not used.
+ *//*
 func handleUpdateData(d map[interface{}]interface{}) bson.M {
 	final := make(bson.M)
 	if d[0] == "reflesh" {
@@ -505,7 +532,10 @@ func handleUpdateData(d map[interface{}]interface{}) bson.M {
 	}
 	return final
 }
-
+*/
+/**
+ * @deprecated this function already not used.
+ *//*
 func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{}, d map[interface{}]interface{}) string {
 	format := checkEssentialCondition(c)
 	if format.Code != CODE_SUCCESS {
@@ -547,6 +577,72 @@ func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{
 			format.Data = ""
 		}
 
+		return format.Send()
+	}
+}
+*/
+/**
+ * mongodb command : "db.collection.update(criteria,objNew,upsert,multi)", upsert & multi is FLASE default.
+ *    you can using $PARAM in "djs".
+ * $inc ：increment the match field value.		eg: {$unset:{field:N}}
+ * $set ：modify the match field value			eg: {$unset:{field:S}}
+ * $unset ：delete the match field value			eg: {$unset:{field:1}}
+ * $push ：add one element into the match field  				eg: {$push:{"field":"elementN"}}
+ * $pushAll ：add element into the field value(more then one)	eg: {$pushAll:{"field":["e1","e2"]}}
+ * $addToSet : like $push if the value not exist				eg: {$push:{"field":"Michael"}}
+ * $pull ：delete the match field value							eg: {$pull:{"field":"elementN"}}
+ * $pullAll ：delete the match field value(more then one)		eg: {$pullAll:{"field":["e1","e2"]}}
+ * $pop : delete first element:-1, or last element:1			eg: {$pop:{"field":-1/1}}
+ * $rename : change the field name								eg: {$rename:{"field1":"field2"}}
+ * ...
+ *
+ */
+func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string, upsert bool) string {
+	format := checkEssentialCondition(c)
+	if format.Code != CODE_SUCCESS {
+		return format.Send()
+
+	} else {
+		instance := newInstance(res)
+		defer instance.Close()
+
+		collection := instance.DB(c["database"]).C(c["collection"])
+
+		var wdata, udata map[string]interface{}
+
+		err1 := json.Unmarshal([]byte(wjs), &wdata )
+		if err1 != nil {
+			format.Code = CODE_DB
+			format.Msg = "wjs "+ string(err1.Error())+ " <"+ wjs + "> "
+		}
+		err2 := json.Unmarshal([]byte(djs), &udata )
+		if err2 != nil {
+			format.Code = CODE_DB
+			format.Msg = "djs "+ string(err2.Error())+ " <"+ djs + "> "
+		}
+
+		if err1==nil && err2==nil {
+			var err error
+			if upsert==true {
+				result, errU := collection.Upsert(wdata, udata)
+				if errU==nil {
+					err = errU
+				}
+				res.processLog("Matched: " + strconv.Itoa(result.Matched) + "' Updated: " + strconv.Itoa(result.Updated))
+
+			} else {
+				err = collection.Update(wdata, udata)
+			}
+
+			if err != nil {
+				format.Code = CODE_DB
+				format.Msg = "update "+ string(err.Error())
+			} else {
+				res.processLog("[Update]: '" + c["database"] + "." + c["collection"] + "; Where:(" +
+					wjs + "); Data:(" + djs + "); Upsert:" + strconv.FormatBool(upsert)  )
+				format.Data = ""
+			}
+		}
 		return format.Send()
 	}
 }
