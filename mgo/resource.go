@@ -151,12 +151,6 @@ func mapToString(m map[string]interface{}) string {
 	return str
 }
 
-func init() {
-	if os.Getenv("ENV") != "pro" {
-		isDebug = false  //开启日志写入性能会大幅下降
-	}
-}
-
 func (res *DbResource) processLog(log string) {
 	if isDebug {
 		res.logger.Info(log)
@@ -635,7 +629,9 @@ func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string
 				if errU != nil {
 					err = errU
 				}
-				res.processLog("Matched: " + strconv.Itoa(result.Matched) + "' Updated: " + strconv.Itoa(result.Updated))
+				if result != nil {
+					res.processLog("Matched: " + strconv.Itoa(result.Matched) + "' Updated: " + strconv.Itoa(result.Updated))
+				}
 
 			} else {
 				err = collection.Update(wdata, udata)
@@ -659,3 +655,9 @@ func (res *DbResource) ChangeResource(resourceId int) {
 }
 
 // invoke service end ==============
+
+func init() {
+	if os.Getenv("ENV") != "pro" {
+		isDebug = false  //DO NOT open on production env
+	}
+}

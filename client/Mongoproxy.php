@@ -29,16 +29,22 @@ namespace BaseComponents\base;
  */
 class Mongoproxy extends \yii\base\Component
 {
-    const COMMAND_SET   = 1;
-    const COMMAND_UNSET = 2;
-    const COMMAND_PUSH  = 3;
-    const COMMAND_PUSHA = 4;
-    const COMMAND_PULL  = 5;
-    const COMMAND_PULLA = 6;
-    const COMMAND_POP   = 7;
-    const COMMAND_INC   = 8;
-    const COMMAND_ATSET = 9;
-    const COMMAND_RENAM = 10;
+    //查询指令 operators
+
+    //更新指令 operators
+    const UPDATE_OP_NONE  = 0;
+    const UPDATE_OP_SET   = 1;
+    const UPDATE_OP_UNSET = 2;
+    const UPDATE_OP_PUSH  = 3;
+    const UPDATE_OP_PUSHA = 4;
+    const UPDATE_OP_PULL  = 5;
+    const UPDATE_OP_PULLA = 6;
+    const UPDATE_OP_POP   = 7;
+    const UPDATE_OP_INC   = 8;
+    const UPDATE_OP_ATSET = 9;
+    const UPDATE_OP_RENAM = 10;
+
+    protected $version= '1.0.1';
 
     protected static $client= null; //
     public $database= null;
@@ -54,6 +60,13 @@ class Mongoproxy extends \yii\base\Component
             return \Hprose\Client::create('http://api.mongoproxy.com/', false);
         }
         return self::$client;
+    }
+
+    //通过切换版本调用不同内置方法
+    public function setVersion($version)
+    {
+        $this->version= $version;
+        return $this;
     }
 
     public function setDebug($isDebug)
@@ -261,28 +274,28 @@ class Mongoproxy extends \yii\base\Component
      * $pop : delete first element:-1, or last element:1			eg: {$pop:{"field":-1/1}}
      * $rename : change the field name								eg: {$rename:{"field1":"field2"}}
      */
-    protected function _buildUpdateData($data, $command)
+    protected function _buildUpdateData(array $data, int $operators )
     {
-        switch ($command){
-            case self::COMMAND_SET:
+        switch ($operators ){
+            case self::UPDATE_OP_SET:
                 $data= ['$set'=> $data]; break;
-            case self::COMMAND_UNSET:
+            case self::UPDATE_OP_UNSET:
                 $data= ['$unset'=> $data]; break;
-            case self::COMMAND_PUSH:
+            case self::UPDATE_OP_PUSH:
                 $data= ['$push'=> $data]; break;
-            case self::COMMAND_PUSHA:
+            case self::UPDATE_OP_PUSHA:
                 $data= ['$pushAll'=> $data]; break;
-            case self::COMMAND_PULL:
+            case self::UPDATE_OP_PULL:
                 $data= ['$pull'=> $data]; break;
-            case self::COMMAND_PULLA:
+            case self::UPDATE_OP_PULLA:
                 $data= ['$pullAll'=> $data]; break;
-            case self::COMMAND_POP:
+            case self::UPDATE_OP_POP:
                 $data= ['$pop'=> $data]; break;
-            case self::COMMAND_INC:
+            case self::UPDATE_OP_INC:
                 $data= ['$inc'=> $data]; break;
-            case self::COMMAND_ATSET:
+            case self::UPDATE_OP_ATSET:
                 $data= ['$addToSet'=> $data]; break;
-            case self::COMMAND_RENAM:
+            case self::UPDATE_OP_RENAM:
                 $data= ['$rename'=> $data]; break;
         }
         return $data;
@@ -290,8 +303,15 @@ class Mongoproxy extends \yii\base\Component
 
     /**
      * 更新表中部分数据，$data 默认传入修改信息  $isUpsert为true时，不存在则自动插入数据
+     * @param $collection
+     * @param array $filter
+     * @param array $data
+     * @param int $updateOperators  默认为'$set'操作指令，也可以通过传入0，再在$data中传入原生的BSON数组来进行复杂的更新指令
+     * @param bool $isUpsert    $isUpsert为true时，不存在则自动插入数据
+     * @param bool $multi      $multi为false时，只修改第一条匹配的数据，为true时修改全表数据
+     * @return array
      */
-    public function update($collection, $filter=[], $data=[], $updateCommand=1, $isUpsert=false)
+    public function update(string $collection, array $filter=[], array $data=[], int $updateOperators=1, bool $isUpsert=false, bool $multi=true)
     {
         $client= $this->getClient();
         $condition= $this->_buildQueryCondition($collection );
@@ -299,10 +319,34 @@ class Mongoproxy extends \yii\base\Component
          * 注意：如要传入过滤条件 _id 为Object类型，需要传入 _id_ ，举例:
          * ->update('collection', ['_id_'=>'59dc3c78c550fe50365e903f'], [ 'k1'=>'8989', 'k2'=>'v99']);
          */
-        if( $updateCommand>0 ){
-            $data= $this->_buildUpdateData($data, $updateCommand);
+        if( $updateOperators>0 ){
+            $data= $this->_buildUpdateData($data, $updateOperators);
         }
-        return $this->_output( $client->update($condition, json_encode($filter), json_encode($data), $isUpsert) );
+        if( $updateOperators==self::UPDATE_OP_NONE  && $multi== true ){
+            //mongodb要求$multi=true时，更新表达式中$update必须使用如$set等指令，避免错误修改全部数据
+            $multi= false;
+        }
+        return $this->_output( $client->update($condition, json_encode($filter), json_encode($data), $isUpsert, $multi) );
+    }
+
+    /**
+     * 直接传入原生$query BSON 和 $update BSON，进行update
+     * @param string $collection
+     * @param BSON $query   eg：{'$and': [{'$or':[{'price':0.99 },{'price':1.99}]}, {'$or':[{'sale':true},{'qty ':20}]} ] }
+     * @param BSON $update  eg：{ $inc: { <field1>: <amount1>, <field2>: <amount2>, ... } }
+     * @param bool $isUpsert   $isUpsert为true时，不存在则自动插入数据
+     * @param bool $multi      $multi为false时，只修改第一条匹配的数据，为true时修改全表数据
+     * @return array
+     */
+    public function updateBson(string $collection, string $query, string $update, bool $isUpsert=false, bool $multi=true)
+    {
+        $client= $this->getClient();
+        $condition= $this->_buildQueryCondition($collection );
+        if( $multi== true && strpos($update, '$')===false ){
+            //mongodb要求$multi=true时，更新表达式中$update必须使用如$set等指令，避免错误修改全部数据
+            $multi= false;
+        }
+        return $this->_output( $client->update($condition, $query, $update, $isUpsert, $multi) );
     }
 
 }
