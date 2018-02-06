@@ -597,7 +597,7 @@ func (res *DbResource) SimpleUpdate(c map[string]string, w map[string]interface{
  * ...
  *
  */
-func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string, upsert bool) string {
+func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string, upsert bool, multi bool) string {
 	format := checkEssentialCondition(c)
 	if format.Code != CODE_SUCCESS {
 		return format.Send()
@@ -625,7 +625,14 @@ func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string
 			var err error
 			if upsert==true {
 				result, errU := collection.Upsert(wdata, udata)
-				if errU==nil {
+				if errU != nil {
+					err = errU
+				}
+				res.processLog("Matched: " + strconv.Itoa(result.Matched) + "' Updated: " + strconv.Itoa(result.Updated))
+
+			} else if multi==true {
+				result, errU := collection.UpdateAll(wdata, udata)
+				if errU != nil {
 					err = errU
 				}
 				res.processLog("Matched: " + strconv.Itoa(result.Matched) + "' Updated: " + strconv.Itoa(result.Updated))
@@ -638,8 +645,8 @@ func (res *DbResource) CombineUpdate(c map[string]string, wjs string, djs string
 				format.Code = CODE_DB
 				format.Msg = "update "+ string(err.Error())
 			} else {
-				res.processLog("[Update]: '" + c["database"] + "." + c["collection"] + "; Where:(" +
-					wjs + "); Data:(" + djs + "); Upsert:" + strconv.FormatBool(upsert)  )
+				res.processLog("[Update]: '" + c["database"] + "." + c["collection"] + "; Where:(" + wjs + "); Data:(" +
+					djs + "); Upsert:" + strconv.FormatBool(upsert) + "); Multi:" + strconv.FormatBool(multi)  )
 				format.Data = ""
 			}
 		}
