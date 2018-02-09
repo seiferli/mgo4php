@@ -206,7 +206,8 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 		}
 
 	} else if w[0] == "in" {
-		final = bson.M{"$in": w[1]}
+		//final = bson.M{"$in": w[1]}
+		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$in": w[2]}}
 
 	} else if w[0] == ">" {
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$gt": w[2]}}
