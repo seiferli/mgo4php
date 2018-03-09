@@ -209,6 +209,9 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 		//final = bson.M{"$in": w[1]}
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$in": w[2]}}
 
+	} else if w[0] == "!in" {
+		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$nin": w[2]}}
+
 	} else if w[0] == ">" {
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$gt": w[2]}}
 
@@ -222,7 +225,7 @@ func parseWhereRecursion(w map[interface{}]interface{}) bson.M {
 		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$lte": w[2]}}
 
 	} else if w[0] == "!" {
-		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$neq": w[2]}}
+		final = bson.M{handleFieldAssetion(w[1]): bson.M{"$ne": w[2]}}
 
 	} else if w[0] == "%" {
 		reg := strings.Replace(handleFieldAssetion(w[2]), "/", "", -1)
