@@ -28,7 +28,7 @@ echo $client->one($params, []); # return one matching record
         _id: 1,
         del: 0,
         gid: 790,
-        logo: "https://image.etcchebao.com/20160314182500cjXwqz.jpg",
+        logo: "https://image.qq.com/20160314182500cjXwqz.jpg",
         name: "商品BBB1",
     }
 }
